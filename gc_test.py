@@ -13,20 +13,27 @@ def time_it(func):
         return res
     return wrapper
 
-@time_it
-def test_no_gc():
-    data = range(1, 50000000)
-    wdict = dict(zip(data, data))
 
 @time_it
-def test_gc():
-    gc.disable()
-    data = range(1, 50000000)
-    wdict = dict(zip(data, data))
-    gc.enable()
+def test_gc(way=1):
+    for i in range(1, 5000000):
+        if way == 1:
+            pass
+        else:
+            del i
+    if way == 1 or way == 2:
+        pass
+    else:
+        gc.collect()
 
-
-
-test_no_gc()    #0.8122742176055908
-test_gc()
+if __name__ == "__main__":
+    print("Test way 1: just pass")
+    test_gc(way=1)
+    time.sleep(20)
+    print("Test way 2: just del")
+    test_gc(way=2)
+    time.sleep(20)
+    print("Test way 3: del, and then gc.collection()")
+    test_gc(way=3)
+    time.sleep(20)
 
