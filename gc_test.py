@@ -3,7 +3,6 @@
 from functools import wraps
 import time
 import gc
-from guppy import hpy
 
 def time_it(func):
     @wraps(func)
