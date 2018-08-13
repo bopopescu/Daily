@@ -622,8 +622,10 @@ def nuser_stat_process(
         queue_history_single,
         queue_history_sum,
         queue_channel_sum,
+        queue_history_user_by_node,
         history_single_count,
         channel_sum_count,
+        history_user_by_node_count,
         count_index):
     # } liupan modify, 2017/8/1
     start_thread_time = int(time.time()) - time_now
@@ -635,6 +637,7 @@ def nuser_stat_process(
     flu_sum = 0
     n_ip_pbs_count = 0
     dic_store_temp = {}
+    dic_user_nodeip = {}
     ip_exist_dic = {}
     # cdn_detail=['none','kw','dl','ws','pbs','ctt'];
 
@@ -755,6 +758,21 @@ def nuser_stat_process(
                 str_region = _detail[0]
                 str_operator = _detail[1]
                 str_cdn = cdn_detail[n_cdn_temp]
+
+                _node_detail = ["其他", "其他"]
+                if str_node_ip in ip_dic:
+                    _node_detail[0] = ip_dic[str_node_ip][2]
+                    _node_detail[1] = ip_dic[str_node_ip][1]
+                str_node_region = _node_detail[0]
+                str_node_operator = _node_detail[1]
+
+                if str_user_ip in ip_exist_dic:
+                    _user_detail = ip_exist_dic[str_user_ip]
+                else:
+                    _user_detail = get_ip_detail(str_user_ip, str_region, str_operator)
+                    ip_exist_dic[str_user_ip] = _user_detail
+                str_user_region = _user_detail[0]
+                str_user_operator = _user_detail[1]
 
                 if str_node_ip in ip_dic:
                     level = int(ip_dic[str_node_ip][0])
@@ -879,6 +897,56 @@ def nuser_stat_process(
                         # } liupan add, 2017/8/17
                 # continue;
                 for channel_name, channel_flu in result["channel_flu"].items():
+
+                    band_width_temp = int(channel_flu) * 8 / 1000 / 60
+                    if str_node_region not in dic_user_nodeip:
+                        dic_user_nodeip[str_node_region] = {}
+                    if str_cdn not in dic_user_nodeip[str_node_region]:
+                        dic_user_nodeip[str_node_region][str_cdn] = {}
+                    if str_node_operator not in dic_user_nodeip[str_node_region][str_cdn]:
+                        dic_user_nodeip[str_node_region][str_cdn][str_node_operator] = {}
+                    if str_node_operator not in dic_user_nodeip[str_node_region][str_cdn][str_node_operator]:
+                        dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag] = {}
+                    if str_node_ip not in dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag]:
+                        dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip] = {}
+                    if str_user_region not in dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip]:
+                        dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region] = {}
+                    if str_user_operator not in dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region]:
+                        dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][str_user_operator] = {}
+                    if channel_name not in dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][str_user_operator]:
+                        dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                            str_user_operator][channel_name] = {
+                            'band_width': 0,
+                            'freeze_count': 0,
+                            'level': level,
+                            'vip': vip_flag,
+                            'request_count': 0,
+                            'success_count': 0,
+                            'all_count': 0,
+                            'bitrate_count': 0,
+                            'bitrate_sum': 0,
+                            'duration': 0,
+                            'jam_all': 0,
+                            'delayed_avg': 0,
+                            'delayed_avg_n': 0
+                        }
+                    if 'delayed_avg' in result and result['delayed_avg'] != 0:
+                        dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                            str_user_operator][channel_name]['delayed_avg_n'] += 1
+                        dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                            str_user_operator][channel_name]['delayed_avg'] += result['delayed_avg']
+                    dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                        str_user_operator][channel_name]['band_width'] += band_width_temp
+                    dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                        str_user_operator][channel_name]['request_count'] += result['req_n']
+                    dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                        str_user_operator][channel_name]['success_count'] += result['suc_n']
+                    dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                        str_user_operator][channel_name]['duration'] += result['duration']
+                    dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                        str_user_operator][channel_name]['jam_all'] += result['jam_all']
+
+
                     if str_region not in dic_store_temp:
                         dic_store_temp[str_region] = {}
                     if str_cdn not in dic_store_temp[str_region]:
@@ -952,7 +1020,7 @@ def nuser_stat_process(
                     dic_store_temp[str_region][str_cdn][str_operator][vip_flag][channel_name]['duration'] += result['duration']
                     dic_store_temp[str_region][str_cdn][str_operator][vip_flag][channel_name]['jam_all'] += result['jam_all']
                     # band_width_temp=result['flu']*8/1000/60;
-                    band_width_temp = int(channel_flu) * 8 / 1000 / 60
+                    # band_width_temp = int(channel_flu) * 8 / 1000 / 60
                     dic_store_temp[str_region][str_cdn][str_operator][vip_flag][channel_name]['band_width'] += band_width_temp
                     # dic_store_temp[str_region][str_cdn][str_operator]['node'][str_node_ip]={'band_width':0,'freeze_count':0,'request_count':0,'success_count':0,'all_count':1,'bitrate_count':0,'bitrate_sum':0};
                     dic_store_temp[str_region][str_cdn][str_operator][vip_flag][
@@ -995,7 +1063,11 @@ def nuser_stat_process(
                             bitrate_time += value
                         if bitrate_time != 0:
                             dic_store_temp[str_region][str_cdn][str_operator][vip_flag][channel_name]['bitrate_sum'] += bitrate_temp
+                            dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                                str_user_operator][channel_name]['bitrate_sum'] += bitrate_temp
                             dic_store_temp[str_region][str_cdn][str_operator][vip_flag][channel_name]['bitrate_count'] += bitrate_time
+                            dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                                str_user_operator][channel_name]['bitrate_count'] += bitrate_time
                             dic_store_temp[str_region][str_cdn][str_operator][vip_flag][
                                 channel_name]['node'][str_node_ip]['bitrate_sum'] += (bitrate_temp)
                             dic_store_temp[str_region][str_cdn][str_operator][vip_flag][
@@ -1005,6 +1077,8 @@ def nuser_stat_process(
                             # dic_store_temp[str_region][str_cdn][str_operator][vip_flag][channel_name]['freeze_count']+=1;
                             # dic_store_temp[str_region][str_cdn][str_operator][vip_flag][channel_name]['node'][str_node_ip]['freeze_count']+=1;
                             dic_store_temp[str_region][str_cdn][str_operator][vip_flag][channel_name]['freeze_count'] += result['jam']
+                            dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                                str_user_operator][channel_name]['freeze_count'] += result['jam']
                             dic_store_temp[str_region][str_cdn][str_operator][vip_flag][
                                 channel_name]['node'][str_node_ip]['freeze_count'] += result['jam']
                             # } liupan modify, 2018/5/31
@@ -1061,6 +1135,19 @@ def nuser_stat_process(
                     dic_store_temp[str_region][str_cdn][str_operator][vip_flag]['req_n'] = 0
                 dic_store_temp[str_region][str_cdn][str_operator][vip_flag]['user_n'] += 1
                 dic_store_temp[str_region][str_cdn][str_operator][vip_flag]['req_n'] += result['req_n']
+
+                if 'user_n' not in dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][str_user_region][
+                        str_user_operator]:
+                    dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][
+                        str_user_region][str_user_operator]['user_n'] = 0
+                    dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][
+                        str_user_region][str_user_operator]['req_n'] = 0
+
+                dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][
+                    str_user_region][str_user_operator]['user_n'] += 1
+                dic_user_nodeip[str_node_region][str_cdn][str_node_operator][vip_flag][str_node_ip][
+                    str_user_region][str_user_operator]['req_n'] += result['req_n']
+
                 # } liupan add, 2018/6/12
                 # { liupan add, 2018/6/14
                 if push_stream_stability_flag:
@@ -1106,6 +1193,7 @@ def nuser_stat_process(
     # } liupan delete, 2017/8/1
     # print(agent_count_dic);
     # 初始化his_cdn_data（history_user_sum 中的cdn）  his_out_data（history_user_sum） his_channel_data（user_channel_cdn_single）
+
 
     write_db = {"user_statistics": [], "time": start}
     dic_store_flu_sum = 0
@@ -1159,6 +1247,59 @@ def nuser_stat_process(
     # history_sum_in=master_db.history_user_sum;
     # channel_sum_in=master_db.user_channel_cdn_single;
     # } liupan delete, 2017/8/1
+    for node_region, cdn_dic in dic_user_nodeip.items():
+        for cdn, node_operator_dic in cdn_dic.items():
+            for node_operator, vip_dic in node_operator_dic.items():
+                for vip_flags, node_ip_dic in vip_dic.items():
+                    for node_ip, user_region_dic in node_ip_dic.items():
+                        for user_region, user_operator_dic in user_region_dic.items():
+                            for user_operator, channel_dic in user_operator_dic.items():
+                                _band_width = 0
+                                _duration = 0
+                                _jam_all = 0
+                                s_count, s_sum = 0, 0
+                                f_count, f_sum = 0, 0
+                                b_count, b_sum = 0, 0
+                                for channel, detail_dic in channel_dic.items():
+                                    if channel == 'user_n' or channel == 'req_n':
+                                        continue
+                                    s_count += detail_dic['success_count']
+                                    s_sum += detail_dic['request_count']
+                                    f_count += detail_dic['freeze_count']
+                                    f_sum += detail_dic['all_count']
+                                    b_count += detail_dic['bitrate_sum']
+                                    b_sum += detail_dic['bitrate_count']
+                                    _level = detail_dic['level']
+                                    _band_width += detail_dic['band_width']
+                                    _duration += detail_dic['duration']
+                                    _jam_all += detail_dic['jam_all']
+                                history_user_by_node_dict = {
+                                    "time": start,
+                                    "cdn": cdn,
+                                    "s_region": node_region,
+                                    "s_ip": node_ip,
+                                    "s_operator": node_operator,
+                                    'u_region': user_region,
+                                    'u_operator': user_operator,
+                                    "freeze_rate": f_count,
+                                    "freeze_rate_sum": f_sum,
+                                    "success_rate": s_count,
+                                    "success_rate_sum": s_sum,
+                                    "band_width": _band_width,
+                                    "level": _level,
+                                    "vip": vip_flags,
+                                    'bit_sum': b_count,
+                                    'bit_time': b_sum,
+                                    'duration': _duration,
+                                    'jam_all': _jam_all,
+                                    'user_n': channel_dic['user_n'],
+                                    'req_n': channel_dic['req_n']
+                                }
+                                #logger.info(history_user_by_node_dict)
+                                queue_history_user_by_node.put(history_user_by_node_dict)
+                                history_user_by_node_count[count_index] += 1
+
+
 
 # dic_store_temp {区域：{cdn:{运营商：{0(非vip)：{channel_name:{,node{127.0.0.1:{}.
     for region, cdn_dic in dic_store_temp.items():
@@ -1881,15 +2022,18 @@ def push_into_mongo2(
         queue_history_single,
         queue_history_sum,
         queue_channel_sum,
+        queue_history_user_by_node,
         process_count,
         history_single_count_all,
-        channel_sum_count_all):
+        channel_sum_count_all,
+        history_user_by_node_count_all):
     #############################################
     ## 计算history single和channel sum的总条数 ##
     #############################################
 
     history_single_count = 0
     channel_sum_count = 0
+    history_user_by_node_count = 0
     for x in history_single_count_all:
         # v = history_single_count_all.get(x);
         # history_single_count += v;
@@ -1898,6 +2042,8 @@ def push_into_mongo2(
         # v = channel_sum_count_all.get(x);
         # channel_sum_count += v;
         channel_sum_count += x
+    for x in history_user_by_node_count_all:
+        history_user_by_node_count += x
 
     ################
     ## 连接数据库 ##
@@ -1916,6 +2062,7 @@ def push_into_mongo2(
     history_in = master_db.history_user_single
     history_sum_in = master_db.history_user_sum
     channel_sum_in = master_db.user_channel_cdn_single
+    history_user_by_node = master_db.history_user_by_node
 
     #######################
     ## 合并statistic数据 ##
@@ -2516,6 +2663,115 @@ def push_into_mongo2(
         'channel_sum_in get count =%d p_count=%d' %
         (get_count, channel_sum_count))
 
+    ############################
+    ## 合并history user by node数据 ##
+    ############################
+    get_count = 0
+    # 记录合并之后的数据
+    history_user_by_node_db = []
+    # 记录每种类型的合并条数，用于求平均值
+    all_count_hs = []
+    try:
+        while get_count < history_user_by_node_count:
+            if get_count == 0:
+                # 从队列中取数据
+                history_user_by_node_db.append(queue_history_user_by_node.get(True, 30))
+                all_count_hs.append(1)
+                get_count += 1
+            else:
+                # 从队列中取数据
+                temp_db = queue_history_user_by_node.get(True, 30)
+                get_count += 1
+                index = -1
+                count = 0
+                # 查找当前是否有该类型的数据
+                for history_user_by_node_x in history_user_by_node_db:
+                    if history_user_by_node_x["cdn"] == temp_db["cdn"] and history_user_by_node_x["s_region"] == temp_db[
+                        "s_region"] and history_user_by_node_x["s_operator"] == temp_db["s_operator"] and history_user_by_node_x[
+                        "u_region"] == temp_db["u_region"] and history_user_by_node_x["u_operator"] == temp_db["u_operator"]:
+                        index = count
+                        break
+                    count += 1
+                # 没有该类型的数据，直接加入
+                if index == -1:
+                    history_user_by_node_db.append(temp_db)
+                    all_count_hs.append(1)
+                # 有该类型的数据，进行合并
+                else:
+                    all_count_hs[index] += 1
+                    # 由于统计时的代码已经写死了这些key名，所以使用前不用判断key是否存在。
+                    history_user_by_node_db[index]["freeze_rate"] += temp_db["freeze_rate"]
+                    history_user_by_node_db[index]["freeze_rate_sum"] += temp_db["freeze_rate_sum"]
+                    history_user_by_node_db[index]["bitrate"] += temp_db["bitrate"]
+                    history_user_by_node_db[index]["success_rate"] += temp_db["success_rate"]
+                    history_user_by_node_db[index]["success_rate_sum"] += temp_db["success_rate_sum"]
+                    history_user_by_node_db[index]["band_width"] += temp_db["band_width"]
+                    history_user_by_node_db[index]["bit_sum"] += temp_db["bit_sum"]
+                    history_user_by_node_db[index]["bit_time"] += temp_db["bit_time"]
+                    history_user_by_node_db[index]["user_n"] += temp_db["user_n"]
+                    history_user_by_node_db[index]["req_n"] += temp_db["req_n"]
+                    history_user_by_node_db[index]["jam_all"] += temp_db["jam_all"]
+                    history_user_by_node_db[index]["duration"] += temp_db["duration"]
+                    # } liupan add, 2018/6/14
+
+                    sum_data(
+                        'delayed_avg',
+                        'delayed_avg_n',
+                        temp_db,
+                        history_user_by_node_db[index])
+
+        else:
+            logger.info("get queue_history_user_by_node Ok!")
+    except queue.Empty:
+        logger.info("queue_history_user_by_node empty.")
+    else:
+        pass
+    # 求平均，并插入数据库
+    for index in range(len(history_user_by_node_db)):
+        # { liupan modify, 2018/5/31
+        # if all_count_hs[index] == 0:
+        #     history_single_db[index]["freeze_rate"] = 0;
+        #     history_single_db[index]["success_rate"] = 0;
+        # else:
+        #     history_single_db[index]["freeze_rate"] /= all_count_hs[index];
+        #     history_single_db[index]["success_rate"] /= all_count_hs[index];
+        if history_user_by_node_db[index]["freeze_rate_sum"] == 0:
+            history_user_by_node_db[index]["freeze_rate"] = 0
+            # { liupan add, 2018/6/14
+            history_user_by_node_db[index]["ps_freeze_rate"] = 0
+            # } liupan add, 2018/6/14
+        else:
+            history_user_by_node_db[index]["freeze_rate"] *= 100
+            history_user_by_node_db[index]["freeze_rate"] /= history_user_by_node_db[index]["freeze_rate_sum"]
+            # { liupan add, 2018/6/14
+            history_user_by_node_db[index]["ps_freeze_rate"] *= 100
+            history_user_by_node_db[index]["ps_freeze_rate"] /= history_user_by_node_db[index]["freeze_rate_sum"]
+            # } liupan add, 2018/6/14
+        # { liupan modify, 2018/6/1
+        # history_single_db[index]["success_rate"] /= all_count_hs[index];
+        if history_user_by_node_db[index]["success_rate_sum"] == 0:
+            history_user_by_node_db[index]["success_rate"] = 0
+        else:
+            history_user_by_node_db[index]["success_rate"] *= 100
+            history_user_by_node_db[index]["success_rate"] /= history_user_by_node_db[index]["success_rate_sum"]
+        del history_user_by_node_db[index]["success_rate_sum"]
+        del history_user_by_node_db[index]["freeze_rate_sum"]
+        if history_user_by_node_db[index]["bit_time"] == 0:
+            history_user_by_node_db[index]["bitrate"] = 0
+        else:
+            history_user_by_node_db[index]["bitrate"] = history_user_by_node_db[index]["bit_sum"] / \
+                                                        history_user_by_node_db[index]["bit_time"]
+
+        # 增加对平均延时的统计
+        cal_avg('delayed_avg_n', 'delayed_avg', history_user_by_node_db[index], True)
+
+        # 插入数据库
+        history_user_by_node.insert_one(history_user_by_node_db[index])
+    logger.info(
+        'history_user_by_node get count =%d p_count=%d' %
+        (get_count, history_user_by_node_count))
+
+
     ################
     ## 关闭数据库 ##
     ################
@@ -2660,16 +2916,20 @@ if __name__ == '__main__':
             queue_history_single = multiprocessing.Queue()             # history single数据
             queue_history_sum = multiprocessing.Queue()                # history sum数据
             queue_channel_sum = multiprocessing.Queue()                # channel sum数据
+            queue_history_user_by_node = multiprocessing.Queue()       # history_user_by_node数据
             # 记录各进程中history single的数据条数
             history_single_count = Array('i', process_num)  # []
             # 记录各进程中channel sum的数据条数
             channel_sum_count = Array('i', process_num)  # []
+            # 记录各进程中history_user_by_node的数据条数
+            history_user_by_node_count = Array('i', process_num)  # []
             # 初始化
             for i in range(process_num):
                 # history_single_count.append(0);
                 # channel_sum_count.append(0);
                 history_single_count[i] = 0
                 channel_sum_count[i] = 0
+                history_user_by_node_count[i] = 0
             count_index = 0
             # } liupan modify, 2017/8/1
             # { liupan add, 2018/6/13
@@ -2718,8 +2978,10 @@ if __name__ == '__main__':
                             queue_history_single,
                             queue_history_sum,
                             queue_channel_sum,
+                            queue_history_user_by_node,
                             history_single_count,
                             channel_sum_count,
+                            history_user_by_node_count,
                             count_index))
                     count_index += 1
                     # } liupan modify, 2017/8/1
@@ -2742,8 +3004,10 @@ if __name__ == '__main__':
                         queue_history_single,
                         queue_history_sum,
                         queue_channel_sum,
+                        queue_history_user_by_node,
                         history_single_count,
                         channel_sum_count,
+                        history_user_by_node_count,
                         count_index))
                 count_index += 1
                 # } liupan modify, 2017/8/1
@@ -2780,9 +3044,11 @@ if __name__ == '__main__':
                 queue_history_single,
                 queue_history_sum,
                 queue_channel_sum,
+                queue_history_user_by_node,
                 process_count,
                 history_single_count,
-                channel_sum_count)
+                channel_sum_count,
+                history_user_by_node_count)
             i_test = 0
             for p in process_list:
                 while p.is_alive():
