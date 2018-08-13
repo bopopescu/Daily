@@ -1,31 +1,13 @@
-# { liupan delete, 2017/8/23
-# log_type = 1
-# } liupan delete, 2017/8/23
-code_version = "ICSAgent V3.3"
-code_build = "2017041701"
-# { liupan delete, 2017/8/23
-# log_duration = 60  #s
-# code_name = "/usr/local/pzs/pzt/local_index.py"
-# pzt_dir = "/usr/local/pzs/pzt/"
-# } liupan delete, 2017/8/23
+# -*- coding: utf-8 -*-
+
+code_version = "ICSAgent V3.4"
+code_build = "2017122801"
 
 fail_times = 0
 import time
 last_fail_time = time.time()
-ftp_conf = {
-    "addr": "monitor1.powzamedia.com",
-    "port": "20021",
-    "user": "upload",
-    "pwd": "sjdd123",
-    "remote_dir":"/data2/upload/"
-}
-# { liupan delete, 2017/8/23
-# kafka_addr = ["ld.mongo1.powzamedia.com:9092","ld.mongo2.powzamedia.com:9092"]
-# log_dir = "/usr/local/pzs/pzlogbak"
-# } liupan delete, 2017/8/23
 
 from kafka import KafkaProducer
-# from multiprocessing import Process
 import threading
 from ftplib import FTP
 ftp = FTP()
@@ -39,7 +21,6 @@ json.encoder.FLOAT_REPR = lambda x: format(x, '.2f')
 import random
 import signal
 import logging
-# { liupan add, 2017/8/23
 import configparser
 
 cp = configparser.SafeConfigParser();
@@ -52,9 +33,7 @@ code_name = cp.get('setting', 'code_name');
 pzt_dir = cp.get('setting', 'pzt_dir');
 kafka_addr = cp.get('setting', 'kafka_addr').split(",");
 log_dir = cp.get('setting', 'log_dir');
-# } liupan add, 2017/8/23
 
-#init public vars
 try:
     from hashlib import md5
     m = md5()
@@ -65,18 +44,6 @@ try:
 except:
     md5_str = "unknow"
 
-# { liupan modify, 2017/8/23
-# try:
-#     in_ip_re = re.compile(r"(10\..+)|(172\.((1[6-9])|(2[0-9])|(3[0-1]))\..+)|(192\.168\..+)")
-#     server_ip = "unknow"
-#     ips = os.popen("LANG=C ifconfig | grep \"inet addr\" | grep -v \"127.0.0.1\" |grep -v \"0.0.0.0\"| awk -F \":\" '{print $2}' | awk '{print $1}'").readlines()
-#     for ip in ips:
-#         ip = ip.replace("\n","")
-#         if not in_ip_re.match(ip):
-#             server_ip = ip
-#             break
-# except:
-#     server_ip = "unknow"
 if use_stable_ip != 1:
     try:
         in_ip_re = re.compile(r"(10\..+)|(172\.((1[6-9])|(2[0-9])|(3[0-1]))\..+)|(192\.168\..+)")
@@ -89,17 +56,6 @@ if use_stable_ip != 1:
                 break
     except:
         server_ip = "unknow"
-# } liupan modify, 2017/8/23
-
-cdn_name = "unknow"
-if log_type==1:
-    cdn_name = "kw"
-elif log_type==2:
-    cdn_name = "dl"
-elif log_type==3:
-    cdn_name = "ws"
-elif log_type==4:
-    cdn_name = "pbs"
 
 class TimeOutException(Exception):
     pass
@@ -126,14 +82,26 @@ def init_log():
 def ifjam(u):
     seg_mode_time = 4 if u["seg_t"] else 10
     return (u["end"]-u["start"]-(u["seg_e"]-u["seg_s"])*seg_mode_time) > seg_mode_time
+
 def stringtify_user_obj(u):
     channel_s = ""
     rate_s = ""
     for c in u['channel_n']:
         channel_s = channel_s + c + ':' + str(u['channel_n'][c]) + ','
     for r in u['rate_n']:
-        rate_s = rate_s + r + ':' + str(u['rate_n'][r]) + ','    
-    return str(u['u_ip'])+'_'+str(u['flu'])+'_'+str(u['start'])+'_'+str(u['end'])+'_'+str(u['jam'])+'_'+str(u['req_n'])+'_'+str(u['suc_n'])+'_'+rate_s+'_'+channel_s
+        rate_s = rate_s + r + ':' + str(u['rate_n'][r]) + ','
+    # { liupan modify, 2018/3/21
+    # return str(u['u_ip'])+'_'+str(u['flu'])+'_'+str(u['start'])+'_'+str(u['end'])+'_'+str(u['jam'])+'_'+str(u['req_n'])+'_'+str(u['suc_n'])+'_'+rate_s+'_'+channel_s
+    agent = ''      # CNTV使用，但为了保持数据格式同步，需要填充空字符串
+    am = ''         # CNTV使用，但为了保持数据格式同步，需要填充空字符串
+    btb = ''        # CNTV使用，但为了保持数据格式同步，需要填充空字符串
+    channelno = ''  # CNTV使用，但为了保持数据格式同步，需要填充空字符串
+    domain_s = ""
+    for d in u['domain_n']:
+        domain_s = domain_s + d + ':' + str(u['domain_n'][d]) + ','
+    return str(u['u_ip'])+'_'+str(u['flu'])+'_'+str(u['start'])+'_'+str(u['end'])+'_'+str(u['jam'])+'_'+str(u['req_n'])+'_'+str(u['suc_n'])+'_'+rate_s+'_'+channel_s+'_'+agent+'_'+am+'_'+btb+'_'+channelno+'_'+domain_s
+    # } liupan modify, 2018/3/21
+
 def conn_kafka(user_list,log_info,log_state,user_state):
     random.shuffle(kafka_addr)
     producer = None
@@ -173,14 +141,16 @@ def calculate(file):
     starttm = int(time.mktime((int(start[0:4]),int(start[4:6]),int(start[6:8]),int(start[8:10]),int(start[10:12]),int(start[12:14]),0,0,0)))
 
     logging.info("start analyzing:"+file)
-#define reg
     req_re = re.compile(r"^(.+)(\d)_/seg(\d).+(\d{9})")
-    live_re = re.compile(r"^(.*)/live/(ld/flv|ld/trans|flv|trans)/")
+    # { liupan modify, 2018/3/21
+    # live_re = re.compile(r"^(.*)/live/(ld/flv|ld/trans|flv|trans)/")
+    live_re = re.compile(r"^(.*)/live/(ld/flv|ld/trans|fd/flv|fd/trans|flv|trans)/")
+    channel_re = re.compile(r"/live/(ld/flv|ld/trans|fd/flv|fd/trans|flv|trans)/(.+)")
+    # } liupan modify, 2018/3/21
     long_rate_re = re.compile(r'(\d+)_(\d+)')
-    # channel_re = re.compile(r'^([^\d\.]+[^\.]*)\..*')
     logs = open(log_dir+"/"+file,'r').readlines()
 
-#init top_list
+    #init top_list
     top_list = {
         'ld/flv' : {
             'type' : 2,
@@ -214,6 +184,40 @@ def calculate(file):
             "bitrate":0,
             "channel_n":{}
         },
+        # { liupan add, 2018/3/21
+        'fd/flv' : {
+            'type' : 2,
+            'list' : [],
+            'users' : {},
+            "req_n":0,
+            "suc_n":0,
+            "suc_r":0,
+            "user_n":0,
+            "jam_n":0,
+            "freeze_r":0,
+            "flu":0,
+            "band":0,
+            "rate_n":{},
+            "bitrate":0,
+            "channel_n":{}
+        },
+        'fd/trans' : {
+            'type' : 2,
+            'list' : [],
+            'users' : {},
+            "req_n":0,
+            "suc_n":0,
+            "suc_r":0,
+            "user_n":0,
+            "jam_n":0,
+            "freeze_r":0,
+            "flu":0,
+            "band":0,
+            "rate_n":{},
+            "bitrate":0,
+            "channel_n":{}
+        },
+        # } liupan add, 2018/3/21
         'flv' : {
             'type' : 2,
             'list' : [],
@@ -258,7 +262,7 @@ def calculate(file):
         'channel_n':{}
     }
 
-#format logs
+    #format logs
     for l in logs:
         try:
             agent = l.split('"')[1].decode("utf-8",'ignore')
@@ -274,13 +278,11 @@ def calculate(file):
             status = bool(re.compile(r"^(2|3)\d{2}$").match(x_group[2]))
             flu = int(x_group[3])
             duration = int(x_group[4])
-            # channel_ma = channel_re.match(x_group[7])
             live_ma = live_re.match(x_group[9])
-            # if channel_ma:
-            #     channel = channel_ma.group(1)
-            # else:
-            #     channel = "unknow"
-            channel = x_group[7].replace('.','')
+            # { liupan modify, 2018/3/21
+            # channel = x_group[7].replace('.','')
+            domain = x_group[7].replace('.','')
+            # } liupan modify, 2018/3/21
             if live_ma:
                 type = live_ma.group(2)
                 rate = x_group[6]
@@ -288,13 +290,23 @@ def calculate(file):
                     live_jam = int(x_group[5])>0
                 except:
                     live_jam = False
-                r = (ip+agent,tim,status,channel,rate,"",live_jam,ip,agent,flu,duration)
+                # { liupan add, 2018/3/21
+                channel_ma = channel_re.match(x_group[9])
+                # { liupan modify, 2018/4/11
+                # channel = channel_ma.group(2).replace('_', '.')
+                channel = channel_ma.group(2).replace('_', '%')
+                # } liupan modify, 2018/4/11
+                # } liupan add, 2018/3/21
+                # { liupan modify, 2018/3/21
+                # r = (ip+agent,tim,status,channel,rate,"",live_jam,ip,agent,flu,duration)
+                r = (ip + agent, tim, status, channel, rate, "", live_jam, ip, agent, flu, duration, domain)
+                # } liupan modify, 2018/3/21
                 if top_list.has_key(type):
                     top_list[type]['list'].append(r)
         except:
             pass
 
-#analyze top_list
+    #analyze top_list
     for category_name in top_list:
         current_category = top_list[category_name]
         log_list = current_category['list']
@@ -323,6 +335,9 @@ def calculate(file):
                         "duration":l[10],
                         "rate_n":{},
                         "channel_n":{},
+                        # { liupan modify, 2018/3/21
+                        "domain_n":{},
+                        # } liupan modify, 2018/3/21
                         "type":category_name
                     }
                 if channel_list.has_key(l[3]):
@@ -337,6 +352,12 @@ def calculate(file):
                     user_list[l[0]]['channel_n'][l[3]] += l[9]
                 else:
                     user_list[l[0]]['channel_n'][l[3]] = l[9]
+                # { liupan add, 2018/3/21
+                if user_list[l[0]]['domain_n'].has_key(l[11]):
+                    user_list[l[0]]['domain_n'][l[11]] += l[9]
+                else:
+                    user_list[l[0]]['domain_n'][l[11]] = l[9]
+                # } liupan add, 2018/3/21
 
                 lrms = long_rate_re.findall(l[4])
                 for lrm in lrms:
@@ -387,7 +408,7 @@ def calculate(file):
         del current_category['list']
         del current_category['users']
 
-#add total keys
+    #add total keys
     user_list = total['user_list']
     log_info = top_list
     log_info['from'] = log_type
@@ -419,7 +440,7 @@ def calculate(file):
         log_info['bitrate'] = 0
     log_info['channel_n'] = total['channel_n']
 
-#send to kafka
+    #send to kafka
     user_list_json = json.JSONEncoder().encode({
         'log_time':starttm,
         'from':log_type,
@@ -428,7 +449,7 @@ def calculate(file):
     })
     log_info_json = json.JSONEncoder().encode(log_info)
 
-    retry_time = 10
+    retry_time = 3
     log_state = False
     user_state = False
     global fail_times
@@ -455,32 +476,9 @@ def calculate(file):
             fail_times += 1
             raise TimeOutException()
 
-    #func end
-
 def handler(signum, frame):
     logging.error("Log Timeout")
     raise TimeOutException()
-
-def upload(file):
-    logging.info("start uploading:"+file)
-    re_up_time = 0
-    while re_up_time <3:
-        re_up_time = re_up_time+1
-        try:
-            ftp.connect(ftp_conf["addr"],ftp_conf["port"])
-            ftp.login(ftp_conf["user"],ftp_conf["pwd"])
-            ftp.cwd(ftp_conf["remote_dir"])
-            file_stream = open(log_dir+"/"+file,'rb')
-            ftp.storbinary("STOR "+cdn_name+"_"+server_ip+"_"+file,file_stream)
-            ftp.quit()
-            break
-        except Exception,e:
-            logging.debug(str(Exception)+":"+str(e)+str(e.args))
-            logging.debug("fail to upload:" + file + ", now retry...")
-    if re_up_time < 3:
-        logging.info("complete uploading:"+file)
-    else:
-        logging.error("failed to upload:"+file+",and retry failed")
 
 def monitor():
     dir = log_dir
@@ -513,8 +511,6 @@ def monitor():
                                     calculate(file)
                                 except:
                                     logging.error("File: "+file+" doesn't exist")
-
-                        #new_progress(file)
                     signal.alarm(0)
                 except TimeOutException, e:
                     try:
@@ -525,16 +521,6 @@ def monitor():
                         logging.error("add timeout file error")
                 except Exception,e:
                     logging.error(str(Exception)+":"+str(e)+str(e.args))
-
-            elif re.compile(r"^access_.+log.7z$").match(file):
-                try:
-                    # time.sleep(10)
-                    # p = Process(target=upload, args=(file,))
-                    # p.start()
-                    # p.join()
-                    threading.Thread(target=upload, args=(file,)).start() 
-                except:
-                    logging.error("fail to start upload progress:"+file)
 
 def main():
     init_log()

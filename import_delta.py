@@ -5,7 +5,7 @@ import logging.handlers
 import time
 import pymongo
 
-log_file = 'jp.log'
+log_file = 'delta.log'
 handler = logging.handlers.RotatingFileHandler(
     log_file, maxBytes=5 * 1024 * 1024, backupCount=5)  # 实例化handler
 fmt = '%(asctime)s - %(filename)s:%(lineno)s - %(name)s - %(message)s'
@@ -21,17 +21,13 @@ if __name__ == "__main__":
     db = master_client.get_database("log_db")
     file = open("freeze_rate08-09.txt", "a")
     ip_list = [
-        '164.52.0.178',
-        '164.52.0.180',
-        '164.52.0.181',
-        '164.52.0.182',
-        '164.52.0.183',
         '164.52.0.184',
         '164.52.0.185',
         '164.52.0.186',
         '164.52.6.19',
         '164.52.6.20'
     ]
+
     # ip_list = [
     #     '164.52.0.180',
     #     '164.52.0.181'
