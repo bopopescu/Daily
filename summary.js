@@ -32,7 +32,7 @@ logger.setLevel('ALL');
 
 function connect_mongo(res,callback){
     var MongoClient = require('mongodb').MongoClient;
-    MongoClient.connect(config.mongo_addr,config.mongo_option, function (err, db) {
+    MongoClient.connect(config.mongo_addr, function (err, db) {
             if(!err){
                 callback(db)
             }else{
@@ -982,6 +982,8 @@ var get_user_cdn_info_func = function(req, res) {
 
                                 var output = {};
                                 var out_count = {};
+                                var sum_jam = 0;
+                                var sum_duration = 0;
                                 for (var i=0; i <logs.length;i++) {
                                     if(!logs[i]['cdn']) {
                                         continue;
@@ -1013,6 +1015,24 @@ var get_user_cdn_info_func = function(req, res) {
                                         if ("ps_freeze_rate" in logs[i]['cdn'][cdn_tmp])
                                             output[time_temp]["ps"]["freeze_rate"] = logs[i]['cdn'][cdn_tmp]["ps_freeze_rate"];
                                     }
+
+                                    else if (historyType == "jamnumperminute") {
+                                         var jam_all = logs[i]['cdn'][cdn_tmp]["jam_all"];
+                                         var duration = logs[i]['cdn'][cdn_tmp]["duration"];
+                                         sum_jam += jam_all;
+                                         sum_duration += duration;
+                                         if (duration==0){
+                                             data_value = 0}
+                                             else {
+                                             data_value = jam_all / (duration /1000 /60);
+                                             };
+                                         if (!(time_temp in output)) {
+                                            output[time_temp] = data_value
+                                        }else {
+                                             output[time_temp] += data_value
+                                         }
+                                    }
+
                                     // } liupan add, 2018/6/19
                                     else {
                                         output[time_temp] = logs[i]['cdn'][cdn_tmp][historyType];
@@ -1162,6 +1182,13 @@ var get_user_cdn_info_func = function(req, res) {
                                         all_output["detail"]=out_result;
                                         all_output["bandwidth95"]=band95;
                                         break;
+                                    case "jamnumperminute":
+                                        all_output["detail"]=out_result;
+                                        if(sum_duration==0){
+                                            all_output["jamnumAverage"] = 0
+                                        }else{
+                                            all_output["jamnumAverage"] = sum_jam / (sum_duration / 1000 / 60);
+                                        }
                                     // { liupan modify, 2018/6/12
                                     // case "bitrate":
                                     //     all_output["detail"]=out_result;
@@ -3980,7 +4007,8 @@ var get_node_history_func = function(req,res){
                                 }
                                 var all_output={};
                                 var out_count={};
-
+                                var sum_jam = 0;
+                                var sum_duration = 0;
                                 for (var i=0; i <logs.length;i++)
                                 {
                                     var data_temp=logs[i];
@@ -3988,6 +4016,8 @@ var get_node_history_func = function(req,res){
                                     if (type=="jamnumperminute"){
                                         var jam_all = data_temp['jam_all']  ? parseInt(data_temp['jam_all']) : 0;
                                         var duration = data_temp['duration'] ? parseInt(data_temp['duration']) : 0;
+                                        sum_jam += jam_all;
+                                        sum_duration += duration;
                                         if (duration==0){
                                             data_value = 0
                                         }else {
@@ -4138,6 +4168,13 @@ var get_node_history_func = function(req,res){
                                         }
                                         // } liupan modify, 2017/12/12
                                         break;
+                                    case "jamnumperminute":
+                                        all_output["detail"]=out_result;
+                                        if(sum_duration==0){
+                                            all_output["jamnumAverage"]=0;
+                                        }else {
+                                            all_output["jamnumAverage"] = sum_jam / (sum_duration / 1000 / 60);
+                                        }
                                     // { liupan modify, 2018/6/12
                                     // case "bitrate":
                                     //     all_output["detail"]=out_result;
@@ -4155,7 +4192,6 @@ var get_node_history_func = function(req,res){
                                     case "req_n":
                                     case "freeze_avg_iv":
                                     case "delayed_avg":
-                                    case "jamnumperminute":
                                         all_output["detail"]=out_result;
                                         break;
 
@@ -4263,7 +4299,8 @@ var get_node_sum_history_func = function(req,res){
                                 }
                                 var all_output={};
                                 var out_count={};
-
+                                var sum_jam = 0;
+                                var sum_duration = 0;
                                 for (var i=0; i <logs.length;i++)
                                 {
                                     if (type=="jamnumperminute"&&cdn_temp==0){
@@ -4271,6 +4308,8 @@ var get_node_sum_history_func = function(req,res){
                                         var data_time_stamp=data_temp["time"];
                                         var jam_all = data_temp['jam_all']  ? parseInt(data_temp['jam_all']) : 0;
                                         var duration = data_temp['duration'] ? parseInt(data_temp['duration']) : 0;
+                                        sum_jam += jam_all;
+                                        sum_duration += duration;
                                         if (duration==0){
                                             data_value = 0
                                         }else {
@@ -4289,23 +4328,13 @@ var get_node_sum_history_func = function(req,res){
 
                                         if (output[data_time_stamp]) //累加
                                         {
-                                            if(data_value!=0)
-                                            {
-                                                output[data_time_stamp]+=data_value;
-                                                out_count[data_time_stamp]+=1;
-                                            }
+                                            output[data_time_stamp]+=data_value;
+                                            out_count[data_time_stamp]+=1;
                                         }
                                         else
                                         {
                                             output[data_time_stamp]=data_value;
-                                            if(data_value!=0)
-                                            {
-                                                out_count[data_time_stamp]=1;
-                                            }
-                                            else
-                                            {
-                                                out_count[data_time_stamp]=0;
-                                            }
+                                            out_count[data_time_stamp]=1;
                                         }
 
 
@@ -4483,6 +4512,14 @@ var get_node_sum_history_func = function(req,res){
                                         }
                                         // } liupan modify, 2017/12/12
                                         break;
+
+                                    case "jamnumperminute":
+                                        all_output["detail"]=out_result;
+                                        if (sum_duration==0){
+                                            all_output["jamnumAverage"] = 0;
+                                        }else {
+                                            all_output["jamnumAverage"] = sum_jam / (sum_duration / 1000 / 60);
+                                        }
                                     // { liupan modify, 2018/6/12
                                     // case "bitrate":
                                     //     all_output["detail"]=out_result;
@@ -4500,7 +4537,6 @@ var get_node_sum_history_func = function(req,res){
                                     case "req_n":
                                     case "freeze_avg_iv":
                                     case "delayed_avg":
-                                    case "jamnumperminute":
                                         all_output["detail"] = out_result;
                                         break;
 
@@ -6050,8 +6086,12 @@ var get_user_history_func = function(req,res){
                             query['cdn'] = {$in: cdn_list};
                         }
                         // } liupan add, 2018/3/9
-                        
-                        back[type]=1;
+                        if (type == "jamnumperminute"){
+                            back['jam_all'] = 1;
+                            back['duration'] = 1;
+                        }else {
+                            back[type]=1;
+                        }
                         // { liupan add, 2017/8/18
                         if (type == "band_width") {
                             back["sy_band_width"] = 1;
@@ -6080,6 +6120,8 @@ var get_user_history_func = function(req,res){
                         }
                         // } liupan modify, 2017/8/18
                         var max_min_time_dic={'max':0,'min':0};
+                        logger.info(query);
+                        logger.info(back);
                         tb.find(query,back).toArray(function(err,logs)
                         {
                             if(!err)
@@ -6092,64 +6134,97 @@ var get_user_history_func = function(req,res){
                                 }
                                 var all_output={};
                                 var out_count={};
+                                var sum_jam = 0;
+                                var sum_duration = 0;
 
                                 for (var i=0; i <logs.length;i++)
                                 {
                                     var data_temp=logs[i];
                                     // { liupan add, 2018/6/12
-                                    if (!(type in data_temp)) continue;
-                                    // } liupan add, 2018/6/12
-                                    if (output[data_temp["time"]])
-                                    {
+
+                                    if (type=="jamnumperminute"){
+                                        var data_temp=logs[i];
+                                        var data_time_stamp=data_temp["time"];
+                                        var jam_all = data_temp['jam_all']  ? parseInt(data_temp['jam_all']) : 0;
+                                        var duration = data_temp['duration'] ? parseInt(data_temp['duration']) : 0;
+                                        sum_jam += jam_all;
+                                        sum_duration += duration;
+
+
+                                        if (duration==0){
+                                            data_value = 0
+                                        }else {
+                                            data_value = jam_all / (duration /1000 /60);
+                                        };
+                                        if (output[data_time_stamp])
                                         {
+                                            output[data_time_stamp]+=data_value;
+                                            out_count[data_time_stamp]+=1;
+                                        }
+                                        else {
+                                            output[data_time_stamp]=data_value;
+                                            out_count[data_time_stamp]=1;
+                                        }
+                                    }
+                                    else {
+                                        if (!(type in data_temp)) continue;
+                                        // } liupan add, 2018/6/12
+                                        if (output[data_temp["time"]]) {
+                                            {
+                                                // { liupan modify, 2017/8/18
+                                                // output[data_temp["time"]]+=data_temp[type];
+                                                if (type == "band_width") {
+                                                    output[data_temp["time"]]["all"]["band_width"] += data_temp["band_width"];
+                                                    if ("sy_band_width" in data_temp)
+                                                        output[data_temp["time"]]["sy"]["band_width"] += data_temp["sy_band_width"];
+                                                }
+                                                // { liupan add, 2018/6/19
+                                                else if (type == "ps_freeze_rate") {
+                                                    output[data_temp["time"]]["all"]["freeze_rate"] += data_temp["freeze_rate"];
+                                                    if ("ps_freeze_rate" in data_temp)
+                                                        output[data_temp["time"]]["ps"]["freeze_rate"] += data_temp["ps_freeze_rate"];
+                                                }
+                                                // } liupan add, 2018/6/19
+                                                else {
+                                                    output[data_temp["time"]] += data_temp[type];
+                                                }
+                                                // } liupan modify, 2017/8/18
+                                                out_count[data_temp["time"]] += 1;
+                                            }
+                                        }
+                                        else {
                                             // { liupan modify, 2017/8/18
-                                            // output[data_temp["time"]]+=data_temp[type];
+                                            // output[data_temp["time"]]=data_temp[type];
                                             if (type == "band_width") {
-                                                output[data_temp["time"]]["all"]["band_width"] += data_temp["band_width"];
+                                                output[data_temp["time"]] = {
+                                                    "all": {"band_width": 0},
+                                                    "sy": {"band_width": 0}
+                                                };
+                                                output[data_temp["time"]]["all"]["band_width"] = data_temp["band_width"];
                                                 if ("sy_band_width" in data_temp)
-                                                    output[data_temp["time"]]["sy"]["band_width"] += data_temp["sy_band_width"];
+                                                    output[data_temp["time"]]["sy"]["band_width"] = data_temp["sy_band_width"];
+                                                else
+                                                    output[data_temp["time"]]["sy"]["band_width"] = 0;
                                             }
                                             // { liupan add, 2018/6/19
                                             else if (type == "ps_freeze_rate") {
-                                                output[data_temp["time"]]["all"]["freeze_rate"] += data_temp["freeze_rate"];
+                                                output[data_temp["time"]] = {
+                                                    "all": {"freeze_rate": 0},
+                                                    "ps": {"freeze_rate": 0}
+                                                };
+                                                output[data_temp["time"]]["all"]["freeze_rate"] = data_temp["freeze_rate"];
                                                 if ("ps_freeze_rate" in data_temp)
-                                                    output[data_temp["time"]]["ps"]["freeze_rate"] += data_temp["ps_freeze_rate"];
+                                                    output[data_temp["time"]]["ps"]["freeze_rate"] = data_temp["ps_freeze_rate"];
+                                                else
+                                                    output[data_temp["time"]]["ps"]["freeze_rate"] = 0;
                                             }
                                             // } liupan add, 2018/6/19
                                             else {
-                                                output[data_temp["time"]]+=data_temp[type];
+                                                output[data_temp["time"]] = data_temp[type];
                                             }
                                             // } liupan modify, 2017/8/18
-                                            out_count[data_temp["time"]]+=1;
+                                            out_count[data_temp["time"]] = 1;
                                         }
-                                    }
-                                    else
-                                    {
-                                        // { liupan modify, 2017/8/18
-                                        // output[data_temp["time"]]=data_temp[type];
-                                        if (type == "band_width") {
-                                            output[data_temp["time"]] = {"all":{"band_width":0}, "sy":{"band_width":0}};
-                                            output[data_temp["time"]]["all"]["band_width"] = data_temp["band_width"];
-                                            if ("sy_band_width" in data_temp)
-                                                output[data_temp["time"]]["sy"]["band_width"] = data_temp["sy_band_width"];
-                                            else
-                                                output[data_temp["time"]]["sy"]["band_width"] = 0;
-                                        }
-                                        // { liupan add, 2018/6/19
-                                        else if (type == "ps_freeze_rate") {
-                                            output[data_temp["time"]] = {"all":{"freeze_rate":0}, "ps":{"freeze_rate":0}};
-                                            output[data_temp["time"]]["all"]["freeze_rate"] = data_temp["freeze_rate"];
-                                            if ("ps_freeze_rate" in data_temp)
-                                                output[data_temp["time"]]["ps"]["freeze_rate"] = data_temp["ps_freeze_rate"];
-                                            else
-                                                output[data_temp["time"]]["ps"]["freeze_rate"] = 0;
-                                        }
-                                        // } liupan add, 2018/6/19
-                                        else {
-                                            output[data_temp["time"]]=data_temp[type];
-                                        }
-                                        // } liupan modify, 2017/8/18
-                                        out_count[data_temp["time"]]=1;
                                     }
                                 }
                                 var band_arr=[];
@@ -6399,6 +6474,13 @@ var get_user_history_func = function(req,res){
                                         }
                                         // } liupan modify, 2017/12/12
                                         break;
+                                    case "jamnumperminute":
+                                        all_output["detail"]=out_result;
+                                        if (sum_duration==0){
+                                            all_output["jamnumAverage"] = 0;
+                                        }else{
+                                            all_output["jamnumAverage"] = sum_jam / (sum_duration / 1000 / 60);
+                                        }
                                     // { liupan modify, 2018/6/12
                                     // case "bitrate":
                                     //     all_output["detail"]=out_result;
@@ -6507,7 +6589,12 @@ var get_user_sum_history_func = function(req,res){
                             // "operator":1,
                             "cdn":1
                         }
-                        back[type]=1;
+                        if (type == "jamnumperminute"){
+                            back['jam_all'] = 1;
+                            back['duration'] = 1;
+                        }else {
+                            back[type]=1;
+                        }
                         // { liupan add, 2017/8/18
                         if (type == "band_width") {
                             back["sy_band_width"] = 1;
@@ -6548,109 +6635,141 @@ var get_user_sum_history_func = function(req,res){
                                 }
                                 var all_output={};
                                 var out_count={};
+                                var sum_jam = 0;
+                                var sum_duration = 0;
 
                                 for (var i=0; i <logs.length;i++)
                                 {
                                     var data_temp=logs[i];
                                     // { liupan add, 2018/6/12
-                                    if (!(type in data_temp)) continue;
-                                    // } liupan add, 2018/6/12
-                                    // { liupan add, 2018/3/9
-                                    if (cdn_list.length > 0) {
-                                        data_temp = {"time": logs[i]['time'], "band_width": 0, "sy_band_width": 0};
-                                        // { liupan add, 2018/6/19
-                                        data_temp["freeze_rate"] = 0;
-                                        // } liupan add, 2018/6/19
-                                        data_temp[type] = 0;
-                                        var valid_count = 0;
-                                        for (var j = 0; j < cdn_list.length; ++j) {
-                                            if (!(cdn_list[j] in logs[i]['cdn']) || !(type in logs[i]['cdn'][cdn_list[j]])) continue;
 
-                                            if (type == "band_width") {
-                                                data_temp["band_width"] += logs[i]['cdn'][cdn_list[j]]["band_width"];
-                                                if ("sy_band_width" in logs[i]['cdn'][cdn_list[j]])
-                                                    data_temp["sy_band_width"] += logs[i]['cdn'][cdn_list[j]]["sy_band_width"];
-                                            }
-                                            // { liupan add, 2018/6/19
-                                            else if (type == "ps_freeze_rate") {
-                                                data_temp["freeze_rate"] += logs[i]['cdn'][cdn_list[j]]["freeze_rate"];
-                                                if ("ps_freeze_rate" in logs[i]['cdn'][cdn_list[j]])
-                                                    data_temp["ps_freeze_rate"] += logs[i]['cdn'][cdn_list[j]]["ps_freeze_rate"];
-                                            }
-                                            // } liupan add, 2018/6/19
-                                            else {
-                                                data_temp[type] += logs[i]['cdn'][cdn_list[j]][type];
-                                            }
-
-                                            if (logs[i]['cdn'][cdn_list[j]]["band_width"] > 0)
-                                                valid_count++;
-                                        }
-
-                                        if (type == "success_rate" || type == "freeze_rate" || type == "bitrate") {
-                                            if (valid_count > 0)
-                                                data_temp[type] /= valid_count;
-                                        }
-                                        // { liupan add, 2018/6/19
-                                        else if (type == "ps_freeze_rate") {
-                                            if (valid_count > 0) {
-                                                data_temp["freeze_rate"] /= valid_count;
-                                                data_temp["ps_freeze_rate"] /= valid_count;
-                                            }
-                                        }
-                                        // } liupan add, 2018/6/19
-                                    }
-                                    // } liupan add, 2018/3/9
-                                    if (output[data_temp["time"]])
-                                    {
+                                    if (type=="jamnumperminute"&&cdn_temp==0){
+                                        var data_time_stamp=data_temp["time"];
+                                        var jam_all = data_temp['jam_all']  ? parseInt(data_temp['jam_all']) : 0;
+                                        var duration = data_temp['duration'] ? parseInt(data_temp['duration']) : 0;
+                                        sum_jam += jam_all;
+                                        sum_duration += duration;
+                                        if (duration==0){
+                                            data_value = 0
+                                        }else {
+                                            data_value = jam_all / (duration /1000 /60);
+                                        };
+                                        if (output[data_time_stamp]) //累加
                                         {
-                                            // { liupan modify, 2017/8/18
-                                            // output[data_temp["time"]]+=data_temp[type];
-                                            if (type == "band_width") {
-                                                output[data_temp["time"]]["all"]["band_width"] += data_temp["band_width"];
-                                                if ("sy_band_width" in data_temp)
-                                                    output[data_temp["time"]]["sy"]["band_width"] += data_temp["sy_band_width"];
+                                            output[data_time_stamp]+=data_value;
+                                            out_count[data_time_stamp]+=1;
+                                        }
+                                        else
+                                        {
+                                            output[data_time_stamp]=data_value;
+                                            out_count[data_time_stamp]=1;
+
+                                        }
+
+                                    }else {
+                                        if (!(type in data_temp)) continue;
+                                        // } liupan add, 2018/6/12
+                                        // { liupan add, 2018/3/9
+                                        if (cdn_list.length > 0) {
+                                            data_temp = {"time": logs[i]['time'], "band_width": 0, "sy_band_width": 0};
+                                            // { liupan add, 2018/6/19
+                                            data_temp["freeze_rate"] = 0;
+                                            // } liupan add, 2018/6/19
+                                            data_temp[type] = 0;
+                                            var valid_count = 0;
+                                            for (var j = 0; j < cdn_list.length; ++j) {
+                                                if (!(cdn_list[j] in logs[i]['cdn']) || !(type in logs[i]['cdn'][cdn_list[j]])) continue;
+
+                                                if (type == "band_width") {
+                                                    data_temp["band_width"] += logs[i]['cdn'][cdn_list[j]]["band_width"];
+                                                    if ("sy_band_width" in logs[i]['cdn'][cdn_list[j]])
+                                                        data_temp["sy_band_width"] += logs[i]['cdn'][cdn_list[j]]["sy_band_width"];
+                                                }
+                                                // { liupan add, 2018/6/19
+                                                else if (type == "ps_freeze_rate") {
+                                                    data_temp["freeze_rate"] += logs[i]['cdn'][cdn_list[j]]["freeze_rate"];
+                                                    if ("ps_freeze_rate" in logs[i]['cdn'][cdn_list[j]])
+                                                        data_temp["ps_freeze_rate"] += logs[i]['cdn'][cdn_list[j]]["ps_freeze_rate"];
+                                                }
+                                                // } liupan add, 2018/6/19
+                                                else {
+                                                    data_temp[type] += logs[i]['cdn'][cdn_list[j]][type];
+                                                }
+
+                                                if (logs[i]['cdn'][cdn_list[j]]["band_width"] > 0)
+                                                    valid_count++;
+                                            }
+
+                                            if (type == "success_rate" || type == "freeze_rate" || type == "bitrate") {
+                                                if (valid_count > 0)
+                                                    data_temp[type] /= valid_count;
                                             }
                                             // { liupan add, 2018/6/19
                                             else if (type == "ps_freeze_rate") {
-                                                output[data_temp["time"]]["all"]["freeze_rate"] += data_temp["freeze_rate"];
+                                                if (valid_count > 0) {
+                                                    data_temp["freeze_rate"] /= valid_count;
+                                                    data_temp["ps_freeze_rate"] /= valid_count;
+                                                }
+                                            }
+                                            // } liupan add, 2018/6/19
+                                        }
+                                        // } liupan add, 2018/3/9
+                                        if (output[data_temp["time"]]) {
+                                            {
+                                                // { liupan modify, 2017/8/18
+                                                // output[data_temp["time"]]+=data_temp[type];
+                                                if (type == "band_width") {
+                                                    output[data_temp["time"]]["all"]["band_width"] += data_temp["band_width"];
+                                                    if ("sy_band_width" in data_temp)
+                                                        output[data_temp["time"]]["sy"]["band_width"] += data_temp["sy_band_width"];
+                                                }
+                                                // { liupan add, 2018/6/19
+                                                else if (type == "ps_freeze_rate") {
+                                                    output[data_temp["time"]]["all"]["freeze_rate"] += data_temp["freeze_rate"];
+                                                    if ("ps_freeze_rate" in data_temp)
+                                                        output[data_temp["time"]]["ps"]["freeze_rate"] += data_temp["ps_freeze_rate"];
+                                                }
+                                                // } liupan add, 2018/6/19
+                                                else {
+                                                    output[data_temp["time"]] += data_temp[type];
+                                                }
+                                                // } liupan modify, 2017/8/18
+                                                out_count[data_temp["time"]] += 1;
+                                            }
+                                        }
+                                        else {
+                                            // { liupan modify, 2017/8/18
+                                            // output[data_temp["time"]]=data_temp[type];
+                                            if (type == "band_width") {
+                                                output[data_temp["time"]] = {
+                                                    "all": {"band_width": 0},
+                                                    "sy": {"band_width": 0}
+                                                };
+                                                output[data_temp["time"]]["all"]["band_width"] = data_temp["band_width"];
+                                                if ("sy_band_width" in data_temp)
+                                                    output[data_temp["time"]]["sy"]["band_width"] = data_temp["sy_band_width"];
+                                                else
+                                                    output[data_temp["time"]]["sy"]["band_width"] = 0;
+                                            }
+                                            // { liupan add, 2018/6/19
+                                            else if (type == "ps_freeze_rate") {
+                                                output[data_temp["time"]] = {
+                                                    "all": {"freeze_rate": 0},
+                                                    "ps": {"freeze_rate": 0}
+                                                };
+                                                output[data_temp["time"]]["all"]["freeze_rate"] = data_temp["freeze_rate"];
                                                 if ("ps_freeze_rate" in data_temp)
-                                                    output[data_temp["time"]]["ps"]["freeze_rate"] += data_temp["ps_freeze_rate"];
+                                                    output[data_temp["time"]]["ps"]["freeze_rate"] = data_temp["ps_freeze_rate"];
+                                                else
+                                                    output[data_temp["time"]]["ps"]["freeze_rate"] = 0;
                                             }
                                             // } liupan add, 2018/6/19
                                             else {
-                                                output[data_temp["time"]]+=data_temp[type];
+                                                output[data_temp["time"]] = data_temp[type];
                                             }
                                             // } liupan modify, 2017/8/18
-                                            out_count[data_temp["time"]]+=1;
+                                            out_count[data_temp["time"]] = 1;
                                         }
-                                    }
-                                    else
-                                    {
-                                        // { liupan modify, 2017/8/18
-                                        // output[data_temp["time"]]=data_temp[type];
-                                        if (type == "band_width") {
-                                            output[data_temp["time"]] = {"all":{"band_width":0}, "sy":{"band_width":0}};
-                                            output[data_temp["time"]]["all"]["band_width"] = data_temp["band_width"];
-                                            if ("sy_band_width" in data_temp)
-                                                output[data_temp["time"]]["sy"]["band_width"] = data_temp["sy_band_width"];
-                                            else
-                                                output[data_temp["time"]]["sy"]["band_width"] = 0;
-                                        }
-                                        // { liupan add, 2018/6/19
-                                        else if (type == "ps_freeze_rate") {
-                                            output[data_temp["time"]] = {"all":{"freeze_rate":0}, "ps":{"freeze_rate":0}};
-                                            output[data_temp["time"]]["all"]["freeze_rate"] = data_temp["freeze_rate"];
-                                            if ("ps_freeze_rate" in data_temp)
-                                                output[data_temp["time"]]["ps"]["freeze_rate"] = data_temp["ps_freeze_rate"];
-                                            else
-                                                output[data_temp["time"]]["ps"]["freeze_rate"] = 0;
-                                        }
-                                        // } liupan add, 2018/6/19
-                                        else {
-                                            output[data_temp["time"]]=data_temp[type];
-                                        }
-                                        // } liupan modify, 2017/8/18
-                                        out_count[data_temp["time"]]=1;
                                     }
                                 }
                                 var band_arr=[];
@@ -6874,6 +6993,13 @@ var get_user_sum_history_func = function(req,res){
                                         }
                                         // } liupan modify, 2017/12/12
                                         break;
+                                    case "jamnumperminute":
+                                        all_output["detail"]=out_result;
+                                        if (sum_duration==0){
+                                            all_output["jamnumAverage"] = 0;
+                                        }else{
+                                            all_output["jamnumAverage"] = sum_jam / (sum_duration / 1000 / 60);
+                                        }
                                     // { liupan modify, 2018/6/12
                                     // case "bitrate":
                                     //     all_output["detail"]=out_result;
