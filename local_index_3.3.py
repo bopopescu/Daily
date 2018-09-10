@@ -111,7 +111,7 @@ def conn_kafka(user_list,log_info,log_state,user_state):
             producer = KafkaProducer(bootstrap_servers=broker)
             logging.info("connected to broker: "+broker)
             break
-        except Exception,e:
+        except Exception as e:
             logging.debug(str(Exception)+":"+str(e))
     if producer is not None:
         if log_state==False:

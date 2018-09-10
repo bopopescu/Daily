@@ -17,7 +17,7 @@ logger.setLevel(logging.DEBUG)
 
 
 if __name__ == "__main__":
-    master_client = MongoClient("jp.imcs.powzamedia.com", 27017)
+    master_client = MongoClient("", 27017)
     db = master_client.get_database("log_db")
     file = open("freeze_rate08-09.txt", "a")
     ip_list = [
