@@ -24,7 +24,7 @@ print(stdin, result, err)
 
 #实现SFTP功能
 # 连接虚拟机centos上的ip及端口
-transport = paramiko.Transport(("39.106.220.85", 22))
+transport = paramiko.Transport(("", 22))
 transport.connect(username="", password="")
 # 将实例化的Transport作为参数传入SFTPClient中
 sftp = paramiko.SFTPClient.from_transport(transport)
