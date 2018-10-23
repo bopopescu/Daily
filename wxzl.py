@@ -7,7 +7,7 @@ sumsdata=[]
 
 pattern = r',|\.|/|;|\'|`|\[|\]|<|>|\?|:|"|\{|\}|\~|!|@|#|\$|%|\^|&|\(|\)|-|=|\_|\+|，|。|、|；|‘|’|【|】|·|！| |…|（|）'
 with open("日藏汉籍.txt",'r', encoding='utf-8') as fp:
-    data=fp.readlines()
+    data = fp.readlines()
     fp.close()
 for index, line in enumerate(data):
     l_item = re.split(pattern, line)
@@ -16,6 +16,6 @@ for index, line in enumerate(data):
             print("第{}行  {}".format(index, item))
             sumsdata.append(item)
 
-cnt=Counter(sumsdata)
+cnt = Counter(sumsdata)
 
 print(cnt)
