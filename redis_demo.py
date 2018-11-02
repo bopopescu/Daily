@@ -18,7 +18,7 @@ import time
 # print(r.hgetall("hash1"))
 
 
-REDIS_HOST = "39.106.220.85"
+REDIS_HOST = ""
 REDIS_PORT = 6379
 REDIS_DBID = 0
 
@@ -68,11 +68,45 @@ class MyRedis(object):
     def hash_getall(self, name):
         return self._connection.hgetall(name)
 
+    def z_add(self, key, member, score):
+        return self._connection.zadd(key, member, score)
+
+    def z_rem(self, key, member):
+        """删除制定元素，1表示成功，元素不存在返回0"""
+        return self._connection.zrem(key, member)
+
+    def z_range(self, key, score_min, score_max):
+        """通过索引区间返回有序集合制定区域内的成员"""
+        return self._connection.zrange(key, score_min, score_max)
+
+    def z_card(self, key):
+        """获取有序集合的成员数"""
+        return self._connection.zcard(key)
+
+    def z_rank(self, key, member):
+        """获取有序集合中制定成员的索引"""
+        return self._connection.zrank(key, member)
+
+    def z_count(self, key, score_min, score_max):
+        """计算有序集合中给定分数区间的成员数"""
+        return self._connection.zcount(key, score_min, score_max)
+
+    def z_remrangebyscore(self, key, score_min, score_max):
+        """移除有序集合中给定分数区间的所有成员"""
+        return self._connection.zremrangebyscore(key, score_min, score_max)
 
 if __name__ == '__main__':
-    print(MyRedis().hash_getall("hash1"))
-    print(MyRedis().hash_set("hash1", "b", "2"))
-    print(MyRedis().hash_get("h1", "a"))
-    print(MyRedis().hash_get("hash1", "b"))
-    print(MyRedis().hash_del("hash1", "b"))
-    print(MyRedis().hash_get("hash1", "b"))
+    r = MyRedis()
+    print(r.hash_getall("hash1"))
+    print(r.hash_set("hash1", "b", "2"))
+    print(r.hash_get("h1", "a"))
+    print(r.hash_get("hash1", "b"))
+    print(r.hash_del("hash1", "b"))
+    print(r.hash_get("hash1", "b"))
+    print(r.z_add("push", "flu_id0", 1200))
+    print(r.z_add("push", "flu_id1", 1201))
+    print(r.z_range("push", 0, 2000))
+    print(r.z_count("push", 0, 2000))
+    print(r.z_rank("push", "flu_id10"))
+    print(type("127.0.0.1"))
+    print(r._connection.hset(str("127.0.0.1"), "b", 2))

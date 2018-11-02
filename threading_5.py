@@ -5,7 +5,7 @@ import threading
 import random
 from queue import Queue
 # 为了能查看队列数据，继承Queue定义一个类
-class ListQueue(7   ；乳房):
+class ListQueue(Queue):
     def _init(self, maxsize):
         self.maxsize = maxsize
         self.queue = [] # 将数据存储方式改为list
