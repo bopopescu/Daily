@@ -3,10 +3,9 @@
 import os
 import re
 import logging
-from django.conf import settings
-from django.core.cache import cache
 from ffmpy import FFmpeg
 logger = logging.getLogger(__name__)
+
 
 def cut_change(video_path, out_path, out_path2, out_path3, base_path, fps_r):
     """
