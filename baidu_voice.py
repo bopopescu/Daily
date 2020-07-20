@@ -19,7 +19,7 @@ step = 500 * 1000
 CutTimeDef = 60
 # client = AipSpeech(APP_ID, API_KEY, SECRET_KEY)
 #
-file_path = "D:\\JIE\\code\\Daily-master\\Daily-master\\testall.wav"
+file_path = "D:\\JIE\\code\\Daily-main\\Daily-main\\testall.wav"
 
 
 def CutFile():

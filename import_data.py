@@ -17,8 +17,8 @@ logger.setLevel(logging.DEBUG)
 
 
 if __name__ == "__main__":
-    master_client = MongoClient("", 27017)
-    db = master_client.get_database("log_db")
+    main_client = MongoClient("", 27017)
+    db = main_client.get_database("log_db")
     file = open("freeze_rate08-09.txt", "a")
     ip_list = [
         '164.52.0.178',
@@ -60,4 +60,4 @@ if __name__ == "__main__":
         # file.write("total:" + str(sum) + " num:" + str(num) + " average:" + str(average) + "\n")
         # print(average)
         # file.write("\n")
-    master_client.close()
+    main_client.close()

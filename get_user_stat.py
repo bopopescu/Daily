@@ -35,10 +35,10 @@ domain_channel = {}
 user_region_flag = 0
 region_dic = {}
 process_num = 0
-mongodb_master_ip = ''
-mongodb_master_port = 27017
-mongodb_slaver_ip = ''
-mongodb_slaver_port = 27017
+mongodb_main_ip = ''
+mongodb_main_port = 27017
+mongodb_subordinater_ip = ''
+mongodb_subordinater_port = 27017
 mongodb_db = ''
 mongodb_user = ''
 mongodb_pwd = ''
@@ -50,10 +50,10 @@ push_stream_stability_delta_change = {}
 
 def getVersionConfig():
     global statis_version
-    global mongodb_master_ip
-    global mongodb_master_port
-    global mongodb_slaver_ip
-    global mongodb_slaver_port
+    global mongodb_main_ip
+    global mongodb_main_port
+    global mongodb_subordinater_ip
+    global mongodb_subordinater_port
     global mongodb_db
     # { liupan add, 2017/8/1
     global region_all
@@ -78,10 +78,10 @@ def getVersionConfig():
     cp = configparser.ConfigParser()
     cp.read('version.conf')
     statis_version = cp.get('setting', 'version')
-    mongodb_master_ip = cp.get('setting', 'mongodb_master_ip')
-    mongodb_master_port = cp.getint('setting', 'mongodb_master_port')
-    mongodb_slaver_ip = cp.get('setting', 'mongodb_slaver_ip')
-    mongodb_slaver_port = cp.getint('setting', 'mongodb_slaver_port')
+    mongodb_main_ip = cp.get('setting', 'mongodb_main_ip')
+    mongodb_main_port = cp.getint('setting', 'mongodb_main_port')
+    mongodb_subordinater_ip = cp.get('setting', 'mongodb_subordinater_ip')
+    mongodb_subordinater_port = cp.getint('setting', 'mongodb_subordinater_port')
     mongodb_db = cp.get('setting', 'mongodb_db')
     # { liupan add, 2018/4/24
     mongodb_user = cp.get('setting', 'mongodb_user')
@@ -548,8 +548,8 @@ def isNewAgent(am, agent):
 
 
 def isChannelPushFreeze(channel_name, start_time):
-    slave_db = slave_client.get_database("monitor_db")
-    push_stream_coll = slave_db.push_stream_info
+    subordinate_db = subordinate_client.get_database("monitor_db")
+    push_stream_coll = subordinate_db.push_stream_info
 
     channel_group = ""
     for x in push_stream_stability_delta_change:
@@ -1228,24 +1228,24 @@ def nuser_stat_process(
     # { liupan delete, 2017/8/1
     # # { liupan modify, 2017/7/13
     # #if statis_version=='CNTV':
-    # #    master_client=MongoClient("192.168.2.30", 27017)
-    # #    master_db=master_client.cntv_log_db
+    # #    main_client=MongoClient("192.168.2.30", 27017)
+    # #    main_db=main_client.cntv_log_db
     # #elif statis_version=='LD_KW':
-    # #    master_client=MongoClient("10.27.219.220", 27017)
-    # #    master_db=master_client.ld_log_db
+    # #    main_client=MongoClient("10.27.219.220", 27017)
+    # #    main_db=main_client.ld_log_db
     # ## { liupan add, 2017/7/11
     # #elif statis_version == 'JAPAN':
-    # #    master_client = MongoClient("10.27.219.220", 27017);      # ???
-    # #    master_db = master_client.jp_log_db;
+    # #    main_client = MongoClient("10.27.219.220", 27017);      # ???
+    # #    main_db = main_client.jp_log_db;
     # ## } liupan add, 2017/7/11
-    # master_client = MongoClient(mongodb_master_ip, mongodb_master_port);
-    # master_db = master_client.get_database(mongodb_db);
+    # main_client = MongoClient(mongodb_main_ip, mongodb_main_port);
+    # main_db = main_client.get_database(mongodb_db);
     # # } liupan modify, 2017/7/13
     #
-    # user_in=master_db.statistic_user
-    # history_in=master_db.history_user_single;
-    # history_sum_in=master_db.history_user_sum;
-    # channel_sum_in=master_db.user_channel_cdn_single;
+    # user_in=main_db.statistic_user
+    # history_in=main_db.history_user_single;
+    # history_sum_in=main_db.history_user_sum;
+    # channel_sum_in=main_db.user_channel_cdn_single;
     # } liupan delete, 2017/8/1
     for node_region, cdn_dic in dic_user_nodeip.items():
         for cdn, node_operator_dic in cdn_dic.items():
@@ -1885,7 +1885,7 @@ def nuser_stat_process(
 
     #logger.info("pid=%d Insert End %d"%(os.getpid(),time_temp));
     # { liupan delete, 2017/8/1
-    # master_client.close();
+    # main_client.close();
     # } liupan delete, 2017/8/1
 
     # { liupan add, 2017/8/1
@@ -1961,29 +1961,29 @@ def push_into_mongo(p_queue, p_count, start_time, process_list):
 
     # { liupan modify, 2017/7/13
     # if statis_version=='CNTV':
-    #    master_client=MongoClient("192.168.2.30", 27017)
-    #    master_db=master_client.cntv_log_db
+    #    main_client=MongoClient("192.168.2.30", 27017)
+    #    main_db=main_client.cntv_log_db
     # elif statis_version=='LD_KW':
-    #    master_client=MongoClient("10.27.219.220", 27017)
-    #    master_db=master_client.ld_log_db
+    #    main_client=MongoClient("10.27.219.220", 27017)
+    #    main_db=main_client.ld_log_db
     # { liupan add, 2017/7/11
     # elif statis_version == 'JAPAN':
-    #    master_client = MongoClient("10.27.219.220", 27017);      # ???
-    #    master_db = master_client.jp_log_db;
+    #    main_client = MongoClient("10.27.219.220", 27017);      # ???
+    #    main_db = main_client.jp_log_db;
     # } liupan add, 2017/7/11
     # { liupan modify, 2018/4/24
-    # master_client = MongoClient(mongodb_master_ip, mongodb_master_port);
+    # main_client = MongoClient(mongodb_main_ip, mongodb_main_port);
     if mongodb_user == '':
-        master_client = MongoClient(mongodb_master_ip, mongodb_master_port)
+        main_client = MongoClient(mongodb_main_ip, mongodb_main_port)
     else:
-        master_client = MongoClient(
+        main_client = MongoClient(
             'mongodb://%s:%s@%s:%s/default_db?authSource=admin' %
-            (mongodb_user, mongodb_pwd, mongodb_master_ip, mongodb_master_port))
+            (mongodb_user, mongodb_pwd, mongodb_main_ip, mongodb_main_port))
     # } liupan modify, 2018/4/24
-    master_db = master_client.get_database(mongodb_db)
+    main_db = main_client.get_database(mongodb_db)
     # } liupan modify, 2017/7/13
 
-    user_in = master_db.user_channel_table
+    user_in = main_db.user_channel_table
     if write_flag == 1:
         for _cdn, channel_dic in channel_push_dic.items():
             cdn_channel_struct = {
@@ -1994,7 +1994,7 @@ def push_into_mongo(p_queue, p_count, start_time, process_list):
             user_in.insert_one(cdn_channel_struct)
     logger.info("push_into_mongo End!")
     logger.info('get count =%d p_count=%d' % (get_count, p_count))
-    master_client.close()
+    main_client.close()
 
 
 def sum_data(str_key, str_key_n, src_data, det_data):
@@ -2049,20 +2049,20 @@ def push_into_mongo2(
     ## 连接数据库 ##
     ################
     # { liupan modify, 2018/4/24
-    # master_client = MongoClient(mongodb_master_ip, mongodb_master_port);
+    # main_client = MongoClient(mongodb_main_ip, mongodb_main_port);
     if mongodb_user == '':
-        master_client = MongoClient(mongodb_master_ip, mongodb_master_port)
+        main_client = MongoClient(mongodb_main_ip, mongodb_main_port)
     else:
-        master_client = MongoClient(
+        main_client = MongoClient(
             'mongodb://%s:%s@%s:%s/default_db?authSource=admin' %
-            (mongodb_user, mongodb_pwd, mongodb_master_ip, mongodb_master_port))
+            (mongodb_user, mongodb_pwd, mongodb_main_ip, mongodb_main_port))
     # } liupan modify, 2018/4/24
-    master_db = master_client.get_database(mongodb_db)
-    user_in = master_db.statistic_user
-    history_in = master_db.history_user_single
-    history_sum_in = master_db.history_user_sum
-    channel_sum_in = master_db.user_channel_cdn_single
-    history_user_by_node = master_db.history_user_by_node
+    main_db = main_client.get_database(mongodb_db)
+    user_in = main_db.statistic_user
+    history_in = main_db.history_user_single
+    history_sum_in = main_db.history_user_sum
+    channel_sum_in = main_db.user_channel_cdn_single
+    history_user_by_node = main_db.history_user_by_node
 
     #######################
     ## 合并statistic数据 ##
@@ -2775,7 +2775,7 @@ def push_into_mongo2(
     ################
     ## 关闭数据库 ##
     ################
-    master_client.close()
+    main_client.close()
 # } liupan add, 2017/8/1
 
 
@@ -2805,26 +2805,26 @@ if __name__ == '__main__':
 
     # { liupan modify, 2017/7/13
     # if statis_version=='CNTV':
-    #    slave_client = MongoClient("192.168.2.29", 27017)
-    #    slave_db = slave_client.cntv_log_db
+    #    subordinate_client = MongoClient("192.168.2.29", 27017)
+    #    subordinate_db = subordinate_client.cntv_log_db
     # elif statis_version=='LD_KW':
-    #    slave_client = MongoClient("10.26.167.116", 27017)
-    #    slave_db = slave_client.ld_log_db
+    #    subordinate_client = MongoClient("10.26.167.116", 27017)
+    #    subordinate_db = subordinate_client.ld_log_db
     # { liupan add, 2017/7/11
     # elif statis_version == 'JAPAN':
-    #    slave_client = MongoClient("10.26.167.116", 27017);             # ???
-    #    slave_db = slave_client.jp_log_db;
+    #    subordinate_client = MongoClient("10.26.167.116", 27017);             # ???
+    #    subordinate_db = subordinate_client.jp_log_db;
     # } liupan add, 2017/7/11
     # { liupan modify, 2018/4/24
-    # slave_client = MongoClient(mongodb_slaver_ip, mongodb_slaver_port);
+    # subordinate_client = MongoClient(mongodb_subordinater_ip, mongodb_subordinater_port);
     if mongodb_user == '':
-        slave_client = MongoClient(mongodb_slaver_ip, mongodb_slaver_port)
+        subordinate_client = MongoClient(mongodb_subordinater_ip, mongodb_subordinater_port)
     else:
-        slave_client = MongoClient(
+        subordinate_client = MongoClient(
             'mongodb://%s:%s@%s:%s/default_db?authSource=admin' %
-            (mongodb_user, mongodb_pwd, mongodb_slaver_ip, mongodb_slaver_port))
+            (mongodb_user, mongodb_pwd, mongodb_subordinater_ip, mongodb_subordinater_port))
     # } liupan modify, 2018/4/24
-    slave_db = slave_client.get_database(mongodb_db)
+    subordinate_db = subordinate_client.get_database(mongodb_db)
     # } liupan modify, 2017/7/13
 
     logger.info("start get_user_stat.py.")
@@ -2848,7 +2848,7 @@ if __name__ == '__main__':
             logger.info("get cdn list end %d." % read_ip_dic_flag)
             ip_dic = {}
             ip_dic = pickle.load(open("node_ip_list_dump", "rb"))
-            collection_user = slave_db.ori_user
+            collection_user = subordinate_db.ori_user
             # minutes=struct_time.tm_sec+180+(struct_time.tm_min%3)*60
             minutes = struct_time.tm_sec + 180
             start = start - minutes
@@ -3066,5 +3066,5 @@ if __name__ == '__main__':
         else:
             time.sleep(1)
     _exit()
-    slave_client.close()
+    subordinate_client.close()
     # client.close();

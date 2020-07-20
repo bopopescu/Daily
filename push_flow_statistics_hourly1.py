@@ -8,10 +8,10 @@ import logging.handlers
 import configparser
 from functools import wraps
 
-mongodb_master_ip = ""
-mongodb_master_port = ""
-mongodb_slaver_ip = ""
-mongodb_slaver_port = ""
+mongodb_main_ip = ""
+mongodb_main_port = ""
+mongodb_subordinater_ip = ""
+mongodb_subordinater_port = ""
 mongodb_db = ""
 mongodb_user = ""
 mongodb_pwd = ""
@@ -36,10 +36,10 @@ logger.setLevel(logging.DEBUG)
 
 
 def getconfig():
-    global mongodb_master_ip
-    global mongodb_master_port
-    global mongodb_slaver_ip
-    global mongodb_slaver_port
+    global mongodb_main_ip
+    global mongodb_main_port
+    global mongodb_subordinater_ip
+    global mongodb_subordinater_port
     global mongodb_db
     global mongodb_user
     global mongodb_pwd
@@ -47,10 +47,10 @@ def getconfig():
     global abroad_link_direct_ips
     config = configparser.ConfigParser()
     config.read("pushflow.conf")
-    mongodb_master_ip = config.get('setting', 'mongodb_master_ip')
-    mongodb_master_port = config.getint('setting', 'mongodb_master_port')
-    mongodb_slaver_ip = config.get('setting', 'mongodb_slaver_ip')
-    mongodb_slaver_port = config.getint('setting', 'mongodb_slaver_port')
+    mongodb_main_ip = config.get('setting', 'mongodb_main_ip')
+    mongodb_main_port = config.getint('setting', 'mongodb_main_port')
+    mongodb_subordinater_ip = config.get('setting', 'mongodb_subordinater_ip')
+    mongodb_subordinater_port = config.getint('setting', 'mongodb_subordinater_port')
     mongodb_db = config.get('setting', 'mongodb_db')
     mongodb_user = config.get('setting', 'mongodb_user')
     mongodb_pwd = config.get('setting', 'mongodb_pwd')
@@ -382,20 +382,20 @@ def statistics_enc_duration(collection):
 if __name__ == '__main__':
     getconfig()
     logger.info("statistics[start]: %s", datetime.datetime.now())
-    slaver_data = get_database(
-        mongodb_slaver_ip,
-        mongodb_slaver_port,
+    subordinater_data = get_database(
+        mongodb_subordinater_ip,
+        mongodb_subordinater_port,
         mongodb_user,
         mongodb_pwd,
         mongodb_db)
-    master_data = get_database(
-        mongodb_master_ip,
-        mongodb_master_port,
+    main_data = get_database(
+        mongodb_main_ip,
+        mongodb_main_port,
         mongodb_user,
         mongodb_pwd,
         mongodb_db)
-    push_flow_data = slaver_data.push_stream_info
-    push_flow_statistics_hourly = master_data.push_flow_statistics_hourly
+    push_flow_data = subordinater_data.push_stream_info
+    push_flow_statistics_hourly = main_data.push_flow_statistics_hourly
     d_link = statistics_link_duration(push_flow_data)
     d_msc = statistics_msc_duration(push_flow_data)
     d_enc = statistics_enc_duration(push_flow_data)

@@ -17,10 +17,10 @@ operator_all = []
 cdn_all = []
 bitrate_detail = {}
 
-mongodb_master_ip = ''
-mongodb_master_port = 27017
-mongodb_slaver_ip = ''
-mongodb_slaver_port = 27017
+mongodb_main_ip = ''
+mongodb_main_port = 27017
+mongodb_subordinater_ip = ''
+mongodb_subordinater_port = 27017
 mongodb_db = ''
 # { liupan add, 2018/4/24
 mongodb_user = ''
@@ -30,10 +30,10 @@ mongodb_pwd = ''
 
 def getVersionConfig():
     global statis_version
-    global mongodb_master_ip
-    global mongodb_master_port
-    global mongodb_slaver_ip
-    global mongodb_slaver_port
+    global mongodb_main_ip
+    global mongodb_main_port
+    global mongodb_subordinater_ip
+    global mongodb_subordinater_port
     global mongodb_db
     global region_all
     global operator_all
@@ -44,10 +44,10 @@ def getVersionConfig():
     cp = configparser.ConfigParser()
     cp.read('version.conf')
     statis_version = cp.get('setting', 'version')
-    mongodb_master_ip = cp.get('setting', 'mongodb_master_ip')
-    mongodb_master_port = cp.getint('setting', 'mongodb_master_port')
-    mongodb_slaver_ip = cp.get('setting', 'mongodb_slaver_ip')
-    mongodb_slaver_port = cp.getint('setting', 'mongodb_slaver_port')
+    mongodb_main_ip = cp.get('setting', 'mongodb_main_ip')
+    mongodb_main_port = cp.getint('setting', 'mongodb_main_port')
+    mongodb_subordinater_ip = cp.get('setting', 'mongodb_subordinater_ip')
+    mongodb_subordinater_port = cp.getint('setting', 'mongodb_subordinater_port')
     mongodb_db = cp.get('setting', 'mongodb_db')
     mongodb_user = cp.get('setting', 'mongodb_user')
     mongodb_pwd = cp.get('setting', 'mongodb_pwd')
@@ -150,13 +150,13 @@ if __name__ == '__main__':
     global bitrate_detail
 
     if mongodb_user == '':
-        slave_client = MongoClient(mongodb_slaver_ip, mongodb_slaver_port)
+        subordinate_client = MongoClient(mongodb_subordinater_ip, mongodb_subordinater_port)
     else:
-        slave_client = MongoClient(
+        subordinate_client = MongoClient(
             'mongodb://%s:%s@%s:%s/default_db?authSource=admin' %
-            (mongodb_user, mongodb_pwd, mongodb_slaver_ip, mongodb_slaver_port))
+            (mongodb_user, mongodb_pwd, mongodb_subordinater_ip, mongodb_subordinater_port))
     # } liupan modify, 2018/4/24
-    slave_db = slave_client.get_database(mongodb_db)
+    subordinate_db = subordinate_client.get_database(mongodb_db)
     # } liupan modify, 2017/7/13
     start = 1533571200
     end = 1533657600
@@ -204,7 +204,7 @@ if __name__ == '__main__':
             pickle.dump(ip_dic, open("node_ip_list_dump", "wb"))
             logger.info("dump node_ip_list_dump.")
         logger.info("get cdn list end %d." % read_ip_dic_flag)
-        collection_node = slave_db.ori_node
+        collection_node = subordinate_db.ori_node
         query = {"start": start}
         res = {
             "_id": 0,
@@ -379,16 +379,16 @@ if __name__ == '__main__':
                     all_data[region_temp][cdn_temp][operator_temp]['delayed_avg'] += result["delayed_avg"]
                     all_count[region_temp][cdn_temp][operator_temp]['delayed_avg_n'] += 1
 
-        master_client = MongoClient(
+        main_client = MongoClient(
                     'mongodb://%s:%s@%s:%s/default_db?authSource=admin' %
                     ('admin123', '123', '39.107.109.85', 27017))
         # } liupan modify, 2018/4/24
-        master_db = master_client.get_database(mongodb_db)
+        main_db = main_client.get_database(mongodb_db)
         # } liupan modify, 2017/7/13
 
-        node_in = master_db.statistic_node
+        node_in = main_db.statistic_node
         logger.info("inserting table ")
         node_in.insert_one(st_node)
         start += 60
-        master_client.close()
-    slave_client.close()
+        main_client.close()
+    subordinate_client.close()
